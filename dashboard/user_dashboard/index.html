@@ -1,0 +1,672 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Room Portal - User Dashboard</title>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --bg-color: #0b0c10;
+            --card-bg: rgba(30, 41, 59, 0.45);
+            --card-border: rgba(255, 255, 255, 0.05);
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --primary: #6366f1;
+            --primary-glow: rgba(99, 102, 241, 0.2);
+            --accent-cyan: #38bdf8;
+            --accent-green: #34d399;
+            --accent-amber: #fbbf24;
+            --accent-red: #f87171;
+            --ai-glow: linear-gradient(135deg, rgba(99, 102, 241, 0.15) 0%, rgba(56, 189, 248, 0.15) 100%);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Outfit', sans-serif;
+            background-color: var(--bg-color);
+            background-image: 
+                radial-gradient(circle at 10% 20%, rgba(99, 102, 241, 0.1) 0%, transparent 40%),
+                radial-gradient(circle at 90% 80%, rgba(56, 189, 248, 0.1) 0%, transparent 40%);
+            background-attachment: fixed;
+            color: var(--text-main);
+            min-height: 100vh;
+            padding: 2rem;
+            overflow-x: hidden;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            backdrop-filter: blur(12px);
+            padding: 1.5rem 2rem;
+            border-radius: 16px;
+        }
+
+        .header-title h1 {
+            font-size: 1.8rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #fff 0%, #a5b4fc 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .header-title p {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            margin-top: 0.25rem;
+        }
+
+        .system-status {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: rgba(52, 211, 153, 0.1);
+            border: 1px solid rgba(52, 211, 153, 0.2);
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--accent-green);
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            background-color: var(--accent-green);
+            border-radius: 50%;
+            box-shadow: 0 0 10px var(--accent-green);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(52, 211, 153, 0.7); }
+            70% { transform: scale(1); box-shadow: 0 0 0 8px rgba(52, 211, 153, 0); }
+            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(52, 211, 153, 0); }
+        }
+
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(12, 1fr);
+            gap: 1.5rem;
+        }
+
+        .glass-card {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 20px;
+            backdrop-filter: blur(12px);
+            padding: 1.5rem;
+            transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+        }
+
+        .glass-card:hover {
+            transform: translateY(-4px);
+            border-color: rgba(99, 102, 241, 0.3);
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4), 0 0 15px rgba(99, 102, 241, 0.05);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .card-title {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        /* Ambient Sensors Block */
+        .sensor-card {
+            grid-column: span 4;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .sensor-value-container {
+            display: flex;
+            align-items: baseline;
+            margin-top: 0.5rem;
+        }
+
+        .sensor-value {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: #fff;
+            transition: color 0.3s ease;
+        }
+
+        .sensor-unit {
+            font-size: 1.2rem;
+            color: var(--text-muted);
+            margin-left: 0.25rem;
+        }
+
+        .sensor-footer {
+            margin-top: 1rem;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+            padding-top: 0.75rem;
+        }
+
+        /* Column spans for specific layouts */
+        .col-4 { grid-column: span 4; }
+        .col-6 { grid-column: span 6; }
+        .col-8 { grid-column: span 8; }
+        .col-12 { grid-column: span 12; }
+
+        /* Alerts List CSS */
+        .alert-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.75rem 1rem;
+            background: rgba(248, 113, 113, 0.08);
+            border: 1px solid rgba(248, 113, 113, 0.15);
+            border-radius: 10px;
+            margin-bottom: 0.75rem;
+            color: #fca5a5;
+            font-size: 0.95rem;
+            animation: slideIn 0.3s ease;
+        }
+
+        .no-alerts {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: var(--accent-green);
+            font-weight: 600;
+        }
+
+        @keyframes slideIn {
+            from { transform: translateY(10px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        /* Stats List */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+        }
+
+        .stat-item {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid rgba(255, 255, 255, 0.04);
+            padding: 0.75rem 1rem;
+            border-radius: 12px;
+        }
+
+        .stat-label {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+
+        .stat-value {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #fff;
+            margin-top: 0.25rem;
+        }
+
+        /* AI Panels */
+        .ai-section {
+            background: var(--ai-glow);
+            border: 1px solid rgba(99, 102, 241, 0.2);
+        }
+
+        .ai-insights-box {
+            padding: 1rem;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            font-size: 0.95rem;
+            line-height: 1.5;
+            color: #e2e8f0;
+        }
+
+        .ai-anomaly-item {
+            padding: 0.75rem 1rem;
+            background: rgba(251, 191, 36, 0.08);
+            border: 1px solid rgba(251, 191, 36, 0.2);
+            border-radius: 10px;
+            margin-bottom: 0.5rem;
+            color: #fef08a;
+            font-size: 0.9rem;
+        }
+
+        .ai-warning-item {
+            padding: 0.75rem 1rem;
+            background: rgba(248, 113, 113, 0.08);
+            border: 1px solid rgba(248, 113, 113, 0.2);
+            border-radius: 10px;
+            margin-bottom: 0.5rem;
+            color: #fca5a5;
+            font-size: 0.9rem;
+        }
+
+        /* Chart card styling */
+        .chart-container {
+            position: relative;
+            height: 250px;
+            width: 100%;
+        }
+
+        /* Flash animation when data changes */
+        .flash {
+            animation: flashHighlight 0.6s ease;
+        }
+
+        @keyframes flashHighlight {
+            0% { background-color: rgba(99, 102, 241, 0.2); }
+            100% { background-color: transparent; }
+        }
+
+        /* Health statuses */
+        .health-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 0.75rem;
+        }
+
+        .health-badge {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.5rem 0.75rem;
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid rgba(255, 255, 255, 0.04);
+            border-radius: 8px;
+            font-size: 0.75rem;
+        }
+
+        .health-status-online { color: var(--accent-green); font-weight: bold;}
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="header-title">
+            <h1>Smart Room Portal</h1>
+            <p>Room ID: <span id="conf-room-id">ROOM_101</span> | 
+               Select Profile: 
+               <select id="user-profile-select" onchange="switchUserProfile(this.value)" style="background: #1e293b; color: #fff; border: 1px solid rgba(255,255,255,0.1); padding: 4px 8px; border-radius: 6px; font-family: inherit; font-size: 0.85rem; cursor: pointer; outline: none; margin: 0 4px;">
+                   <!-- Filled dynamically -->
+               </select> |
+               Refresh Rate: 2s | Uptime: <span id="uptime">0:00:00</span></p>
+        </div>
+        <div class="system-status">
+            <div class="status-dot"></div>
+            <span>USER PORTAL</span>
+        </div>
+    </header>
+
+    <main class="dashboard-grid">
+
+        <!-- 1. Ambient Temperature -->
+        <div class="glass-card sensor-card col-4">
+            <div class="card-header">
+                <span class="card-title">Temperature</span>
+                <span style="color: var(--accent-red); font-size: 1.2rem;">🔥</span>
+            </div>
+            <div class="sensor-value-container">
+                <span class="sensor-value" id="val-temp">--.-</span>
+                <span class="sensor-unit">°C</span>
+            </div>
+            <div class="sensor-footer">
+                Limit Threshold: 35.0 °C
+            </div>
+        </div>
+
+        <!-- 2. Ambient Humidity -->
+        <div class="glass-card sensor-card col-4">
+            <div class="card-header">
+                <span class="card-title">Humidity</span>
+                <span style="color: var(--accent-cyan); font-size: 1.2rem;">💧</span>
+            </div>
+            <div class="sensor-value-container">
+                <span class="sensor-value" id="val-humidity">--</span>
+                <span class="sensor-unit">%</span>
+            </div>
+            <div class="sensor-footer">
+                Limit Threshold: 80.0 %
+            </div>
+        </div>
+
+        <!-- 3. Ambient Air Quality -->
+        <div class="glass-card sensor-card col-4">
+            <div class="card-header">
+                <span class="card-title">Air Quality</span>
+                <span style="color: var(--accent-amber); font-size: 1.2rem;">🌫</span>
+            </div>
+            <div class="sensor-value-container">
+                <span class="sensor-value" id="val-aqi">---</span>
+                <span class="sensor-unit">AQI</span>
+            </div>
+            <div class="sensor-footer">
+                Limit Threshold: 180.0 AQI
+            </div>
+        </div>
+
+        <!-- 4. Graph Visualizations -->
+        <div class="glass-card col-8">
+            <div class="card-header">
+                <span class="card-title">Live Sensor Telemetry Trends</span>
+            </div>
+            <div class="chart-container">
+                <canvas id="telemetryChart"></canvas>
+            </div>
+        </div>
+
+        <!-- 5. Statistics Panel -->
+        <div class="glass-card col-4">
+            <div class="card-header">
+                <span class="card-title">Historical Statistics</span>
+            </div>
+            <div class="stats-grid">
+                <div class="stat-item">
+                    <div class="stat-label">Avg Temp</div>
+                    <div class="stat-value" id="stat-avg-temp">--.- °C</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">Max Temp</div>
+                    <div class="stat-value" id="stat-max-temp">--.- °C</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">Avg Humidity</div>
+                    <div class="stat-value" id="stat-avg-humidity">--.- %</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">Avg AQI</div>
+                    <div class="stat-value" id="stat-avg-aqi">---.-</div>
+                </div>
+            </div>
+            <div class="sensor-footer" style="margin-top: 1.2rem;">
+                Total Database Records: <span id="db-total-records">0</span>
+            </div>
+        </div>
+
+        <!-- 6. AI Insights Engine (Advanced Section) -->
+        <div class="glass-card ai-section col-6">
+            <div class="card-header">
+                <span class="card-title" style="color: #c084fc; font-weight: bold;">🧠 AI Anomaly Detection (Z-Score)</span>
+            </div>
+            <div id="ai-anomalies-list">
+                <div class="no-alerts">Collecting baseline readings...</div>
+            </div>
+        </div>
+
+        <!-- 7. AI Predictive Forecasting -->
+        <div class="glass-card ai-section col-6">
+            <div class="card-header">
+                <span class="card-title" style="color: var(--accent-cyan); font-weight: bold;">🔮 AI Future Forecasts (Linear Trend)</span>
+            </div>
+            <div class="stats-grid" style="margin-bottom: 1rem;">
+                <div class="stat-item" style="background: rgba(56, 189, 248, 0.03);">
+                    <div class="stat-label">Projected Temp (15s)</div>
+                    <div class="stat-value" id="fore-temp" style="color: var(--accent-cyan);">--.- °C</div>
+                </div>
+                <div class="stat-item" style="background: rgba(56, 189, 248, 0.03);">
+                    <div class="stat-label">Projected AQI (15s)</div>
+                    <div class="stat-value" id="fore-aqi" style="color: var(--accent-cyan);">---</div>
+                </div>
+            </div>
+            <div id="ai-forecast-warnings">
+                <div style="font-size: 0.85rem; color: var(--text-muted);">Analyzing baseline trends...</div>
+            </div>
+        </div>
+
+        <!-- 8. Alerts & Actions -->
+        <div class="glass-card col-6">
+            <div class="card-header">
+                <span class="card-title" style="color: var(--accent-red); font-weight: bold;">🚨 Active Alerts</span>
+            </div>
+            <div id="active-alerts-list">
+                <div class="no-alerts">✅ No Active Alerts</div>
+            </div>
+        </div>
+
+        <!-- 9. MQTT & DB System Health -->
+        <div class="glass-card col-6">
+            <div class="card-header">
+                <span class="card-title">Room Environment Metadata</span>
+            </div>
+            <div class="health-grid">
+                <div class="health-badge">
+                    <span style="color: var(--text-muted);">Motion Sensor</span>
+                    <span id="val-motion" style="font-weight: bold;">None</span>
+                </div>
+                <div class="health-badge">
+                    <span style="color: var(--text-muted);">Light Sensor</span>
+                    <span id="val-light" style="font-weight: bold;">-- lux</span>
+                </div>
+            </div>
+            <div style="margin-top: 1.5rem; font-size: 0.85rem; color: var(--text-muted);">
+                Welcome to your smart room dashboard portal. Use this interface to inspect environment statistics and real-time status.
+            </div>
+        </div>
+
+    </main>
+
+    <script>
+        // Setup Chart
+        const ctx = document.getElementById('telemetryChart').getContext('2d');
+        const telemetryChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: [],
+                datasets: [
+                    {
+                        label: 'Temperature (°C)',
+                        borderColor: '#f87171',
+                        backgroundColor: 'rgba(248, 113, 113, 0.1)',
+                        data: [],
+                        yAxisID: 'y-temp',
+                        tension: 0.3,
+                        fill: true
+                    },
+                    {
+                        label: 'Air Quality (AQI)',
+                        borderColor: '#fbbf24',
+                        backgroundColor: 'rgba(251, 191, 36, 0.1)',
+                        data: [],
+                        yAxisID: 'y-aqi',
+                        tension: 0.3,
+                        fill: true
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: {
+                        grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                        ticks: { color: '#94a3b8' }
+                    },
+                    'y-temp': {
+                        type: 'linear',
+                        position: 'left',
+                        grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                        ticks: { color: '#f87171' },
+                        title: { display: true, text: 'Temp (°C)', color: '#f87171' }
+                    },
+                    'y-aqi': {
+                        type: 'linear',
+                        position: 'right',
+                        grid: { drawOnChartArea: false },
+                        ticks: { color: '#fbbf24' },
+                        title: { display: true, text: 'Air Quality (AQI)', color: '#fbbf24' }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        labels: { color: '#f8fafc' }
+                    }
+                }
+            }
+        });
+
+        let lastTimestamp = "";
+        let currentRoomId = "ROOM_101";
+        let userProfiles = [];
+
+        function loadUserProfiles() {
+            fetch('/api/users')
+                .then(res => res.json())
+                .then(users => {
+                    userProfiles = users;
+                    const select = document.getElementById('user-profile-select');
+                    select.innerHTML = users.map(u => `<option value="${u.id}">${u.name} (${u.role})</option>`).join('');
+                    if (users.length > 0) {
+                        switchUserProfile(users[0].id);
+                    }
+                })
+                .catch(err => console.error("Error loading user profiles:", err));
+        }
+
+        function switchUserProfile(userId) {
+            const user = userProfiles.find(u => u.id === userId);
+            if (user) {
+                currentRoomId = user.assigned_room;
+                document.getElementById('conf-room-id').innerText = currentRoomId;
+                // Reset chart
+                telemetryChart.data.labels = [];
+                telemetryChart.data.datasets[0].data = [];
+                telemetryChart.data.datasets[1].data = [];
+                telemetryChart.update();
+                lastTimestamp = "";
+                fetchTelemetry();
+            }
+        }
+
+        // Fetch updates from backend API
+        function fetchTelemetry() {
+            fetch(`/api/data?room_id=${currentRoomId}`)
+                .then(res => res.json())
+                .then(data => {
+                    if (!data || !data.sensor_data) return;
+                    
+                    const sensor = data.sensor_data;
+                    
+                    // Update Room ID
+                    document.getElementById('conf-room-id').innerText = sensor.room_id;
+
+                    // Update sensor values with flash highlight if value changed
+                    updateValue('val-temp', sensor.temperature.toFixed(1));
+                    updateValue('val-humidity', sensor.humidity);
+                    updateValue('val-aqi', sensor.air_quality);
+                    updateValue('val-motion', sensor.motion ? '🔴 Detected' : '🟢 Clear');
+                    updateValue('val-light', `${sensor.light} lux`);
+
+                    // Update stats
+                    if (data.statistics) {
+                        const s = data.statistics;
+                        document.getElementById('stat-avg-temp').innerText = `${s.avg_temp} °C`;
+                        document.getElementById('stat-max-temp').innerText = `${s.max_temp} °C`;
+                        document.getElementById('stat-avg-humidity').innerText = `${s.avg_humidity} %`;
+                        document.getElementById('stat-avg-aqi').innerText = `${s.avg_air}`;
+                    }
+
+                    // Update database metadata
+                    document.getElementById('db-total-records').innerText = data.total_records || 0;
+
+                    // Update uptime
+                    if (data.uptime) {
+                        document.getElementById('uptime').innerText = data.uptime;
+                    }
+
+                    // Update alerts
+                    const alertList = document.getElementById('active-alerts-list');
+                    if (data.alerts && data.alerts.length > 0) {
+                        alertList.innerHTML = data.alerts.map(a => `<div class="alert-item">⚠️ ${a}</div>`).join('');
+                    } else {
+                        alertList.innerHTML = '<div class="no-alerts">✅ No Active Alerts</div>';
+                    }
+
+                    // Update AI Anomalies
+                    const anomalyList = document.getElementById('ai-anomalies-list');
+                    if (data.ai_anomalies && data.ai_anomalies.length > 0) {
+                        anomalyList.innerHTML = data.ai_anomalies.map(a => `<div class="ai-anomaly-item">${a}</div>`).join('');
+                    } else {
+                        anomalyList.innerHTML = '<div class="no-alerts">✅ System Stable: No Statistical Anomalies</div>';
+                    }
+
+                    // Update AI Forecasts
+                    const forecastWarnings = document.getElementById('ai-forecast-warnings');
+                    if (data.ai_forecasts && Object.keys(data.ai_forecasts).length > 0) {
+                        document.getElementById('fore-temp').innerText = `${data.ai_forecasts.temperature} °C`;
+                        document.getElementById('fore-aqi').innerText = `${data.ai_forecasts.air_quality} AQI`;
+                        
+                        if (data.ai_warnings && data.ai_warnings.length > 0) {
+                            forecastWarnings.innerHTML = data.ai_warnings.map(w => `<div class="ai-warning-item">${w}</div>`).join('');
+                        } else {
+                            forecastWarnings.innerHTML = '<div style="font-size: 0.85rem; color: var(--accent-green); font-weight: bold;">📈 Normal Trends: No future threshold breaches projected</div>';
+                        }
+                    } else {
+                        document.getElementById('fore-temp').innerText = '--.- °C';
+                        document.getElementById('fore-aqi').innerText = '---';
+                        forecastWarnings.innerHTML = '<div style="font-size: 0.85rem; color: var(--text-muted);">Collecting baseline data...</div>';
+                    }
+
+                    // Update Live Chart if timestamp is new
+                    if (sensor.timestamp !== lastTimestamp) {
+                        lastTimestamp = sensor.timestamp;
+                        const timeLabel = sensor.timestamp.split(' ')[1]; // Get HH:MM:SS
+                        
+                        // Push new data points
+                        telemetryChart.data.labels.push(timeLabel);
+                        telemetryChart.data.datasets[0].data.push(sensor.temperature);
+                        telemetryChart.data.datasets[1].data.push(sensor.air_quality);
+                        
+                        // Shift older data if > 15 elements
+                        if (telemetryChart.data.labels.length > 15) {
+                            telemetryChart.data.labels.shift();
+                            telemetryChart.data.datasets[0].data.shift();
+                            telemetryChart.data.datasets[1].data.shift();
+                        }
+                        
+                        telemetryChart.update();
+                    }
+                })
+                .catch(err => console.error("Error fetching telemetry:", err));
+        }
+
+        // Helper to flash value if changed
+        function updateValue(id, val) {
+            const el = document.getElementById(id);
+            if (el.innerText !== String(val)) {
+                el.innerText = val;
+                el.classList.remove('flash');
+                void el.offsetWidth; // trigger reflow
+                el.classList.add('flash');
+            }
+        }
+
+        // Poll API every 2 seconds
+        setInterval(fetchTelemetry, 2000);
+        
+        // Run immediately on load
+        loadUserProfiles();
+    </script>
+</body>
+</html>
