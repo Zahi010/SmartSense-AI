@@ -1,0 +1,954 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Room Monitoring - Admin Console</title>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --bg-color: #0d0e15;
+            --card-bg: rgba(25, 28, 41, 0.65);
+            --card-border: rgba(255, 255, 255, 0.08);
+            --text-main: #f3f4f6;
+            --text-muted: #9ca3af;
+            --primary: #8b5cf6;
+            --primary-glow: rgba(139, 92, 246, 0.3);
+            --accent-cyan: #06b6d4;
+            --accent-green: #10b981;
+            --accent-amber: #f59e0b;
+            --accent-red: #ef4444;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Outfit', sans-serif;
+            background-color: var(--bg-color);
+            background-image: 
+                radial-gradient(circle at 10% 20%, rgba(139, 92, 246, 0.15) 0%, transparent 40%),
+                radial-gradient(circle at 90% 80%, rgba(6, 182, 212, 0.15) 0%, transparent 40%);
+            background-attachment: fixed;
+            color: var(--text-main);
+            min-height: 100vh;
+            padding: 2rem;
+            overflow-x: hidden;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            backdrop-filter: blur(12px);
+            padding: 1.5rem 2rem;
+            border-radius: 16px;
+        }
+
+        .header-title h1 {
+            font-size: 1.8rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #fff 0%, #a78bfa 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .header-title p {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            margin-top: 0.25rem;
+        }
+
+        .system-status {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid rgba(16, 185, 129, 0.2);
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--accent-green);
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            background-color: var(--accent-green);
+            border-radius: 50%;
+            box-shadow: 0 0 10px var(--accent-green);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+            70% { transform: scale(1); box-shadow: 0 0 0 8px rgba(239, 68, 68, 0); }
+            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+        }
+
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(12, 1fr);
+            gap: 1.5rem;
+        }
+
+        .glass-card {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 20px;
+            backdrop-filter: blur(12px);
+            padding: 1.5rem;
+            transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+        }
+
+        .glass-card:hover {
+            transform: translateY(-4px);
+            border-color: rgba(139, 92, 246, 0.3);
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4), 0 0 15px rgba(139, 92, 246, 0.05);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .card-title {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        /* Ambient Sensors Block */
+        .sensor-card {
+            grid-column: span 4;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .sensor-value-container {
+            display: flex;
+            align-items: baseline;
+            margin-top: 0.5rem;
+        }
+
+        .sensor-value {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: #fff;
+            transition: color 0.3s ease;
+        }
+
+        .sensor-unit {
+            font-size: 1.2rem;
+            color: var(--text-muted);
+            margin-left: 0.25rem;
+        }
+
+        .sensor-footer {
+            margin-top: 1rem;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+            padding-top: 0.75rem;
+        }
+
+        /* Column spans for specific layouts */
+        .col-4 { grid-column: span 4; }
+        .col-6 { grid-column: span 6; }
+        .col-8 { grid-column: span 8; }
+        .col-12 { grid-column: span 12; }
+
+        /* Alerts List CSS */
+        .alert-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.75rem 1rem;
+            background: rgba(239, 68, 68, 0.08);
+            border: 1px solid rgba(239, 68, 68, 0.15);
+            border-radius: 10px;
+            margin-bottom: 0.75rem;
+            color: #fca5a5;
+            font-size: 0.95rem;
+            animation: slideIn 0.3s ease;
+        }
+
+        .no-alerts {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: var(--accent-green);
+            font-weight: 600;
+        }
+
+        @keyframes slideIn {
+            from { transform: translateY(10px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        /* Stats List */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+        }
+
+        .stat-item {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid rgba(255, 255, 255, 0.04);
+            padding: 0.75rem 1rem;
+            border-radius: 12px;
+        }
+
+        .stat-label {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+
+        .stat-value {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #fff;
+            margin-top: 0.25rem;
+        }
+
+        /* AI Panels */
+        .ai-section {
+            background: linear-gradient(135deg, rgba(139, 92, 246, 0.08) 0%, rgba(6, 182, 212, 0.08) 100%);
+            border: 1px solid rgba(139, 92, 246, 0.2);
+        }
+
+        .ai-anomaly-item {
+            padding: 0.75rem 1rem;
+            background: rgba(245, 158, 11, 0.08);
+            border: 1px solid rgba(245, 158, 11, 0.2);
+            border-radius: 10px;
+            margin-bottom: 0.5rem;
+            color: #fde047;
+            font-size: 0.9rem;
+        }
+
+        .ai-warning-item {
+            padding: 0.75rem 1rem;
+            background: rgba(239, 68, 68, 0.08);
+            border: 1px solid rgba(239, 68, 68, 0.2);
+            border-radius: 10px;
+            margin-bottom: 0.5rem;
+            color: #fca5a5;
+            font-size: 0.9rem;
+        }
+
+        /* Chart card styling */
+        .chart-container {
+            position: relative;
+            height: 250px;
+            width: 100%;
+        }
+
+        /* Flash animation when data changes */
+        .flash {
+            animation: flashHighlight 0.6s ease;
+        }
+
+        @keyframes flashHighlight {
+            0% { background-color: rgba(139, 92, 246, 0.2); }
+            100% { background-color: transparent; }
+        }
+
+        /* Health statuses */
+        .health-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 0.75rem;
+        }
+
+        .health-badge {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.5rem 0.75rem;
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid rgba(255, 255, 255, 0.04);
+            border-radius: 8px;
+            font-size: 0.75rem;
+        }
+
+        .health-status-online { color: var(--accent-green); font-weight: bold;}
+
+        /* Controls Panel */
+        .controls-panel {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .btn {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: #fff;
+            padding: 0.6rem 1.2rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            font-family: inherit;
+            transition: all 0.2s ease;
+        }
+
+        .btn:hover {
+            background: var(--primary);
+            border-color: var(--primary);
+            box-shadow: 0 0 10px var(--primary-glow);
+        }
+
+        .btn-danger:hover {
+            background: var(--accent-red);
+            border-color: var(--accent-red);
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="header-title">
+            <h1>Smart Room Monitoring — Admin Console</h1>
+            <p>Welcome, <strong>{{ user_name }}</strong> | Active Room: 
+               <select id="room-select" onchange="changeActiveRoom(this.value)" style="background: #191c29; color: #fff; border: 1px solid rgba(255,255,255,0.1); padding: 4px 8px; border-radius: 6px; font-family: inherit; font-size: 0.85rem; cursor: pointer; outline: none; margin: 0 4px;">
+                   <option value="ROOM_101" {% if selected_room == 'ROOM_101' %}selected{% endif %}>ROOM_101</option>
+                   <option value="ROOM_102" {% if selected_room == 'ROOM_102' %}selected{% endif %}>ROOM_102</option>
+               </select> |
+               Uptime: <span id="uptime">0:00:00</span></p>
+        </div>
+        <div style="display: flex; align-items: center; gap: 0.75rem;">
+            <a href="/admin" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08); color: #94a3b8; padding: 0.5rem 1rem; border-radius: 10px; font-size: 0.8rem; font-weight: 600; text-decoration: none; transition: all 0.2s;">← Rooms</a>
+            <div class="system-status" style="background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.2); color: var(--accent-red);">
+                <div class="status-dot" style="background-color: var(--accent-red); box-shadow: 0 0 10px var(--accent-red);"></div>
+                <span>ADMIN CONSOLE</span>
+            </div>
+            <a href="/logout" style="background: rgba(248,113,113,0.1); border: 1px solid rgba(248,113,113,0.25); color: #f87171; padding: 0.5rem 1rem; border-radius: 10px; font-family: inherit; font-size: 0.85rem; font-weight: 600; cursor: pointer; text-decoration: none;">🚪 Logout</a>
+        </div>
+    </header>
+
+
+    <main class="dashboard-grid">
+
+        <!-- 1. Ambient Temperature -->
+        <div class="glass-card sensor-card col-4">
+            <div class="card-header">
+                <span class="card-title">Temperature</span>
+                <span style="color: var(--accent-red); font-size: 1.2rem;">🔥</span>
+            </div>
+            <div class="sensor-value-container">
+                <span class="sensor-value" id="val-temp">--.-</span>
+                <span class="sensor-unit">°C</span>
+            </div>
+            <div class="sensor-footer">
+                Limit Threshold: 35.0 °C
+            </div>
+        </div>
+
+        <!-- 2. Ambient Humidity -->
+        <div class="glass-card sensor-card col-4">
+            <div class="card-header">
+                <span class="card-title">Humidity</span>
+                <span style="color: var(--accent-cyan); font-size: 1.2rem;">💧</span>
+            </div>
+            <div class="sensor-value-container">
+                <span class="sensor-value" id="val-humidity">--</span>
+                <span class="sensor-unit">%</span>
+            </div>
+            <div class="sensor-footer">
+                Limit Threshold: 80.0 %
+            </div>
+        </div>
+
+        <!-- 3. Ambient Air Quality -->
+        <div class="glass-card sensor-card col-4">
+            <div class="card-header">
+                <span class="card-title">Air Quality</span>
+                <span style="color: var(--accent-amber); font-size: 1.2rem;">🌫</span>
+            </div>
+            <div class="sensor-value-container">
+                <span class="sensor-value" id="val-aqi">---</span>
+                <span class="sensor-unit">AQI</span>
+            </div>
+            <div class="sensor-footer">
+                Limit Threshold: 180.0 AQI
+            </div>
+        </div>
+
+        <!-- 4. Graph Visualizations -->
+        <div class="glass-card col-8">
+            <div class="card-header">
+                <span class="card-title">Live Sensor Telemetry Trends</span>
+            </div>
+            <div class="chart-container">
+                <canvas id="telemetryChart"></canvas>
+            </div>
+        </div>
+
+        <!-- 5. Statistics Panel -->
+        <div class="glass-card col-4">
+            <div class="card-header">
+                <span class="card-title">Historical Statistics</span>
+            </div>
+            <div class="stats-grid">
+                <div class="stat-item">
+                    <div class="stat-label">Avg Temp</div>
+                    <div class="stat-value" id="stat-avg-temp">--.- °C</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">Max Temp</div>
+                    <div class="stat-value" id="stat-max-temp">--.- °C</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">Avg Humidity</div>
+                    <div class="stat-value" id="stat-avg-humidity">--.- %</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">Avg AQI</div>
+                    <div class="stat-value" id="stat-avg-aqi">---.-</div>
+                </div>
+            </div>
+            <div class="sensor-footer" style="margin-top: 1.2rem;">
+                Total Database Records: <span id="db-total-records">0</span>
+            </div>
+        </div>
+
+        <!-- 6. AI Insights Engine (Advanced Section) -->
+        <div class="glass-card ai-section col-6">
+            <div class="card-header">
+                <span class="card-title" style="color: #c084fc; font-weight: bold;">🧠 AI Anomaly Detection (Z-Score)</span>
+            </div>
+            <div id="ai-anomalies-list">
+                <div class="no-alerts">Collecting baseline readings...</div>
+            </div>
+        </div>
+
+        <!-- 7. AI Predictive Forecasting -->
+        <div class="glass-card ai-section col-6">
+            <div class="card-header">
+                <span class="card-title" style="color: var(--accent-cyan); font-weight: bold;">🔮 AI Future Forecasts (Linear Trend)</span>
+            </div>
+            <div class="stats-grid" style="margin-bottom: 1rem;">
+                <div class="stat-item" style="background: rgba(6, 182, 212, 0.03);">
+                    <div class="stat-label">Projected Temp (15s)</div>
+                    <div class="stat-value" id="fore-temp" style="color: var(--accent-cyan);">--.- °C</div>
+                </div>
+                <div class="stat-item" style="background: rgba(6, 182, 212, 0.03);">
+                    <div class="stat-label">Projected AQI (15s)</div>
+                    <div class="stat-value" id="fore-aqi" style="color: var(--accent-cyan);">---</div>
+                </div>
+            </div>
+            <div id="ai-forecast-warnings">
+                <div style="font-size: 0.85rem; color: var(--text-muted);">Analyzing baseline trends...</div>
+            </div>
+        </div>
+
+        <!-- 8. Alerts & Actions -->
+        <div class="glass-card col-6">
+            <div class="card-header">
+                <span class="card-title" style="color: var(--accent-red); font-weight: bold;">🚨 Active Alerts</span>
+            </div>
+            <div id="active-alerts-list">
+                <div class="no-alerts">✅ No Active Alerts</div>
+            </div>
+        </div>
+
+        <!-- 9. MQTT & DB System Health -->
+        <div class="glass-card col-6">
+            <div class="card-header">
+                <span class="card-title">System Health & Middleware</span>
+            </div>
+            <div class="health-grid">
+                <div class="health-badge">
+                    <span style="color: var(--text-muted);">MQTT Broker</span>
+                    <span class="health-status-online" id="health-mqtt">ONLINE</span>
+                </div>
+                <div class="health-badge">
+                    <span style="color: var(--text-muted);">Database</span>
+                    <span class="health-status-online" id="health-db">CONNECTED</span>
+                </div>
+                <div class="health-badge">
+                    <span style="color: var(--text-muted);">Encryption</span>
+                    <span class="health-status-online" id="health-enc">AES-256</span>
+                </div>
+                <div class="health-badge">
+                    <span style="color: var(--text-muted);">MQTT Messages</span>
+                    <span id="health-mqtt-msgs" style="font-weight: bold;">0</span>
+                </div>
+                <div class="health-badge">
+                    <span style="color: var(--text-muted);">Database Size</span>
+                    <span id="health-db-size" style="font-weight: bold;">0 bytes</span>
+                </div>
+                <div class="health-badge">
+                    <span style="color: var(--text-muted);">Motion Sensor</span>
+                    <span id="val-motion" style="font-weight: bold;">None</span>
+                </div>
+            </div>
+            <div class="controls-panel">
+                <button class="btn" onclick="sendCommand('pause')">Pause Loop</button>
+                <button class="btn" onclick="sendCommand('resume')">Resume Loop</button>
+                <button class="btn btn-danger" onclick="sendCommand('clear')">Clear DB</button>
+            </div>
+            <div class="controls-panel" style="margin-top: 0.75rem; display: flex; gap: 0.5rem; flex-wrap: wrap; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 0.75rem;">
+                <button class="btn btn-danger" onclick="sendCommand('trigger fire')">🔥 Trigger Fire</button>
+                <button class="btn" style="background: rgba(37,99,235,0.2); border-color: rgba(37,99,235,0.4);" onclick="sendCommand('trigger cold')">❄️ Trigger Cold</button>
+                <button class="btn" style="background: rgba(16,185,129,0.2); border-color: rgba(16,185,129,0.4);" onclick="sendCommand('trigger clear')">🟢 Clear Overrides</button>
+            </div>
+        </div>
+
+        <!-- Smart HVAC & Energy Optimizer Card -->
+        <div class="glass-card col-12" style="background: linear-gradient(135deg, rgba(16, 185, 129, 0.08) 0%, rgba(6, 182, 212, 0.08) 100%); border: 1px solid rgba(16, 185, 129, 0.2);">
+            <div class="card-header">
+                <span class="card-title" style="color: var(--accent-green); font-weight: bold;">🌱 Smart HVAC & Energy Optimizer</span>
+                <span style="font-size: 1.2rem;">🔋</span>
+            </div>
+            <div style="display: flex; gap: 2rem; align-items: center; justify-content: space-between; flex-wrap: wrap;">
+                <div style="flex: 1; min-width: 160px;">
+                    <div style="font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em;">HVAC Mode</div>
+                    <div id="hvac-mode" style="font-size: 1.6rem; font-weight: 800; color: #fff; margin-top: 0.2rem;">Off</div>
+                </div>
+                <div style="flex: 1; min-width: 160px;">
+                    <div style="font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em;">Power Draw</div>
+                    <div id="hvac-power" style="font-size: 1.6rem; font-weight: 800; color: var(--accent-amber); margin-top: 0.2rem;">0 W</div>
+                </div>
+                <div style="flex: 1; min-width: 160px;">
+                    <div style="font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em;">Outdoor Temp</div>
+                    <div id="outdoor-temp" style="font-size: 1.6rem; font-weight: 800; color: var(--accent-cyan); margin-top: 0.2rem;">--.- °C</div>
+                </div>
+                <div style="flex: 1.2; min-width: 220px;">
+                    <div style="font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em;">Cumulative Savings</div>
+                    <div id="hvac-savings" style="font-size: 1.6rem; font-weight: 800; color: var(--accent-green); margin-top: 0.2rem;">0.0000 kWh</div>
+                </div>
+            </div>
+            <div id="hvac-advice" style="margin-top: 1.2rem; padding: 0.75rem 1rem; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); border-radius: 10px; font-size: 0.9rem; color: #e2e8f0; border-left: 3px solid var(--accent-green);">
+                Analyzing environmental variables...
+            </div>
+        </div>
+
+        <!-- Comfort Negotiation Card -->
+        <div class="glass-card col-12" style="background: linear-gradient(135deg, rgba(99,102,241,0.08) 0%, rgba(168,85,247,0.08) 100%); border: 1px solid rgba(99,102,241,0.25);">
+            <div class="card-header">
+                <span class="card-title" style="color: #a78bfa; font-weight: bold;">🤝 Collaborative Comfort Negotiation (Nash Bargaining)</span>
+                <span id="negotiation-fairness-label" style="font-size: 0.8rem; padding: 3px 10px; background: rgba(99,102,241,0.15); border: 1px solid rgba(99,102,241,0.25); border-radius: 20px; color: #c4b5fd;">Waiting...</span>
+            </div>
+
+            <!-- Negotiation Stats Row -->
+            <div style="display: flex; gap: 2rem; flex-wrap: wrap; margin-bottom: 1.2rem;">
+                <div style="flex: 1; min-width: 150px;">
+                    <div style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em;">Negotiated Target</div>
+                    <div id="negotiated-temp" style="font-size: 2rem; font-weight: 800; color: #a78bfa; margin-top: 0.2rem;">--.- °C</div>
+                </div>
+                <div style="flex: 1; min-width: 150px;">
+                    <div style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em;">Fairness Index (Jain's)</div>
+                    <div id="fairness-index" style="font-size: 2rem; font-weight: 800; color: #c4b5fd; margin-top: 0.2rem;">--</div>
+                </div>
+                <div style="flex: 1; min-width: 150px;">
+                    <div style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em;">Residents Present</div>
+                    <div id="residents-present" style="font-size: 1.1rem; font-weight: 700; color: #fff; margin-top: 0.4rem;">--</div>
+                </div>
+            </div>
+
+            <!-- Per-resident discomfort table -->
+            <div id="discomfort-table" style="display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 1rem;">
+                <div style="color: var(--text-muted); font-size: 0.85rem;">Loading resident preferences...</div>
+            </div>
+
+            <!-- Status banner -->
+            <div id="negotiation-status" style="padding: 0.75rem 1rem; background: rgba(99,102,241,0.08); border: 1px solid rgba(99,102,241,0.15); border-radius: 10px; font-size: 0.9rem; color: #e2e8f0; border-left: 3px solid #a78bfa;">
+                Analyzing resident preferences...
+            </div>
+        </div>
+
+        <!-- User Management Card -->
+        <div class="glass-card col-6">
+            <div class="card-header">
+                <span class="card-title" style="color: var(--accent-cyan);">👥 User Directory</span>
+            </div>
+            <div id="users-list" style="max-height: 180px; overflow-y: auto; margin-bottom: 1rem; display: flex; flex-direction: column; gap: 0.5rem;">
+                <!-- Filled dynamically -->
+            </div>
+            <div style="border-top: 1px solid rgba(255, 255, 255, 0.05); padding-top: 0.75rem;">
+                <span style="font-size: 0.85rem; font-weight: bold; color: var(--text-muted);">Add New User:</span>
+                <div style="display: flex; gap: 0.5rem; margin-top: 0.5rem;">
+                    <input type="text" id="new-user-name" placeholder="Name" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: #fff; padding: 6px 10px; border-radius: 6px; flex: 2; font-family: inherit; font-size: 0.85rem; outline: none;">
+                    <select id="new-user-role" style="background: #191c29; color: #fff; border: 1px solid rgba(255,255,255,0.1); padding: 6px 10px; border-radius: 6px; flex: 1.2; font-family: inherit; font-size: 0.85rem; outline: none; cursor: pointer;">
+                        <option value="Resident">Resident</option>
+                        <option value="Admin">Admin</option>
+                    </select>
+                    <select id="new-user-room" style="background: #191c29; color: #fff; border: 1px solid rgba(255,255,255,0.1); padding: 6px 10px; border-radius: 6px; flex: 1.2; font-family: inherit; font-size: 0.85rem; outline: none; cursor: pointer;">
+                        <option value="ROOM_101">ROOM_101</option>
+                        <option value="ROOM_102">ROOM_102</option>
+                    </select>
+                    <button class="btn" onclick="addNewUser()" style="padding: 6px 12px; font-size: 0.85rem; border-radius: 6px;">Add</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Audit Log Card -->
+        <div class="glass-card col-6">
+            <div class="card-header">
+                <span class="card-title" style="color: var(--accent-amber);">📝 Pipeline Audit Log</span>
+            </div>
+            <div id="audit-log-box" style="max-height: 250px; overflow-y: auto; font-family: monospace; font-size: 0.82rem; color: #cbd5e1; background: rgba(0,0,0,0.25); padding: 1rem; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05); display: flex; flex-direction: column; gap: 0.4rem; height: 230px;">
+                <!-- Filled dynamically -->
+            </div>
+        </div>
+
+    </main>
+
+    <script>
+        // Setup Chart
+        const ctx = document.getElementById('telemetryChart').getContext('2d');
+        const telemetryChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: [],
+                datasets: [
+                    {
+                        label: 'Temperature (°C)',
+                        borderColor: '#ef4444',
+                        backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                        data: [],
+                        yAxisID: 'y-temp',
+                        tension: 0.3,
+                        fill: true
+                    },
+                    {
+                        label: 'Air Quality (AQI)',
+                        borderColor: '#f59e0b',
+                        backgroundColor: 'rgba(245, 158, 11, 0.1)',
+                        data: [],
+                        yAxisID: 'y-aqi',
+                        tension: 0.3,
+                        fill: true
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: {
+                        grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                        ticks: { color: '#9ca3af' }
+                    },
+                    'y-temp': {
+                        type: 'linear',
+                        position: 'left',
+                        grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                        ticks: { color: '#ef4444' },
+                        title: { display: true, text: 'Temp (°C)', color: '#ef4444' }
+                    },
+                    'y-aqi': {
+                        type: 'linear',
+                        position: 'right',
+                        grid: { drawOnChartArea: false },
+                        ticks: { color: '#f59e0b' },
+                        title: { display: true, text: 'Air Quality (AQI)', color: '#f59e0b' }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        labels: { color: '#f3f4f6' }
+                    }
+                }
+            }
+        });
+
+        let lastTimestamp = "";
+        let currentRoomId = "{{ selected_room }}";
+
+        function changeActiveRoom(roomId) {
+            currentRoomId = roomId;
+            document.getElementById('conf-room-id').innerText = roomId;
+            // Clear current chart data to redraw for new room
+            telemetryChart.data.labels = [];
+            telemetryChart.data.datasets[0].data = [];
+            telemetryChart.data.datasets[1].data = [];
+            telemetryChart.update();
+            lastTimestamp = "";
+            fetchTelemetry();
+        }
+
+        // Send pause/resume/clear commands to the server
+        function sendCommand(cmd) {
+            fetch('/api/command', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    command: cmd,
+                    user: "Admin Operator",
+                    room_id: currentRoomId
+                })
+            })
+            .then(res => res.json())
+            .then(data => {
+                console.log("Command Response:", data);
+                fetchAuditLogs();
+            })
+            .catch(err => console.error("Error sending command:", err));
+        }
+
+        // Fetch User Directory
+        function fetchUsers() {
+            fetch('/api/users')
+                .then(res => res.json())
+                .then(users => {
+                    const list = document.getElementById('users-list');
+                    if (users.length === 0) {
+                        list.innerHTML = '<div style="color: var(--text-muted); font-size: 0.85rem;">No registered users</div>';
+                        return;
+                    }
+                    list.innerHTML = users.map(u => `
+                        <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.02); padding: 0.5rem 0.75rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.03);">
+                            <div>
+                                <span style="font-weight: 600; color: #fff;">${u.name}</span>
+                                <span style="font-size: 0.75rem; color: var(--accent-cyan); margin-left: 0.4rem; padding: 1px 4px; background: rgba(56,189,248,0.1); border-radius: 4px;">${u.role}</span>
+                                <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.15rem;">Room: ${u.assigned_room} | ${u.email || 'No Email'}</div>
+                            </div>
+                            <button onclick="deleteUser('${u.id}')" style="background: transparent; border: none; color: var(--accent-red); cursor: pointer; font-size: 0.85rem; font-weight: bold;">✕</button>
+                        </div>
+                    `).join('');
+                })
+                .catch(err => console.error("Error fetching users:", err));
+        }
+
+        // Add new user
+        function addNewUser() {
+            const name = document.getElementById('new-user-name').value.trim();
+            const role = document.getElementById('new-user-role').value;
+            const room = document.getElementById('new-user-room').value;
+            if (!name) return alert("Please enter a name");
+
+            fetch('/api/users', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name, role, assigned_room: room, email: `${name.toLowerCase().replace(' ', '')}@smartroom.io` })
+            })
+            .then(res => res.json())
+            .then(() => {
+                document.getElementById('new-user-name').value = '';
+                fetchUsers();
+                fetchAuditLogs();
+            })
+            .catch(err => console.error("Error adding user:", err));
+        }
+
+        // Delete user
+        function deleteUser(id) {
+            fetch(`/api/users?id=${id}`, { method: 'DELETE' })
+                .then(res => res.json())
+                .then(() => {
+                    fetchUsers();
+                    fetchAuditLogs();
+                })
+                .catch(err => console.error("Error deleting user:", err));
+        }
+
+        // Fetch Audit Logs
+        function fetchAuditLogs() {
+            fetch('/api/audit-logs')
+                .then(res => res.json())
+                .then(logs => {
+                    const box = document.getElementById('audit-log-box');
+                    if (logs.length === 0) {
+                        box.innerHTML = '<div>No audit events logged.</div>';
+                        return;
+                    }
+                    box.innerHTML = logs.map(l => `
+                        <div>
+                            <span style="color: var(--text-muted);">${l.timestamp}</span> | 
+                            <span style="color: var(--accent-cyan); font-weight: 600;">${l.user}</span> - 
+                            <span style="color: #fff; font-weight: bold;">${l.action}</span> 
+                            ${l.details ? `<span style="color: var(--text-muted);">(${l.details})</span>` : ''}
+                        </div>
+                    `).reverse().join('');
+                })
+                .catch(err => console.error("Error fetching audit logs:", err));
+        }
+
+        // Fetch updates from backend API
+        function fetchTelemetry() {
+            fetch(`/api/data?room_id=${currentRoomId}`)
+                .then(res => res.json())
+                .then(data => {
+                    if (!data || !data.sensor_data) return;
+                    
+                    const sensor = data.sensor_data;
+                    
+                    // Sync room selector dropdown to current room
+                    const roomSelect = document.getElementById('room-select');
+                    if (roomSelect) roomSelect.value = sensor.room_id;
+
+
+                    // Update sensor values with flash highlight if value changed
+                    updateValue('val-temp', sensor.temperature.toFixed(1));
+                    updateValue('val-humidity', sensor.humidity);
+                    updateValue('val-aqi', sensor.air_quality);
+                    updateValue('val-motion', sensor.motion ? '🔴 Detected' : '🟢 Clear');
+
+                    // Update HVAC & Energy Stats
+                    if (data.hvac) {
+                        const h = data.hvac;
+                        updateValue('hvac-mode', h.mode);
+                        updateValue('hvac-power', `${h.power_draw} W`);
+                        updateValue('outdoor-temp', `${h.outdoor_temp.toFixed(1)} °C`);
+                        updateValue('hvac-savings', `${h.cumulative_savings_kwh.toFixed(4)} kWh`);
+                        document.getElementById('hvac-advice').innerText = h.advice;
+                    }
+
+                    // Update Comfort Negotiation Card
+                    if (data.negotiation) {
+                        const neg = data.negotiation;
+                        updateValue('negotiated-temp', `${neg.negotiated_temp} °C`);
+                        updateValue('fairness-index', neg.fairness_index.toFixed(3));
+                        document.getElementById('negotiation-fairness-label').innerText = neg.fairness_label;
+
+                        const present = neg.present_residents;
+                        document.getElementById('residents-present').innerText =
+                            present.length > 0 ? present.join(' & ') : 'None (unoccupied)';
+
+                        const table = document.getElementById('discomfort-table');
+                        if (neg.discomfort && neg.discomfort.length > 0) {
+                            table.innerHTML = neg.discomfort.map(d => `
+                                <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.03); border:1px solid rgba(99,102,241,0.15); padding:0.6rem 1rem; border-radius:10px;">
+                                    <div>
+                                        <span style="font-weight:700; color:#fff;">${d.name}</span>
+                                        <span style="font-size:0.78rem; color:var(--text-muted); margin-left:0.5rem;">prefers ${d.preferred}°C · weight ${d.weight}</span>
+                                    </div>
+                                    <div style="text-align:right;">
+                                        <span style="font-size:0.85rem; color:${d.delta === 0 ? '#34d399' : Math.abs(d.delta) <= 1.5 ? '#fbbf24' : '#f87171'};">${d.direction}</span>
+                                        <span style="display:block; font-size:0.75rem; color:var(--text-muted);">Loss: ${d.comfort_loss}°C</span>
+                                    </div>
+                                </div>
+                            `).join('');
+                        } else {
+                            table.innerHTML = '<div style="color:var(--text-muted); font-size:0.85rem;">No residents present in room.</div>';
+                        }
+
+                        document.getElementById('negotiation-status').innerText = neg.status;
+                    }
+
+                    // Update stats
+                    if (data.statistics) {
+                        const s = data.statistics;
+                        document.getElementById('stat-avg-temp').innerText = `${s.avg_temp} °C`;
+                        document.getElementById('stat-max-temp').innerText = `${s.max_temp} °C`;
+                        document.getElementById('stat-avg-humidity').innerText = `${s.avg_humidity} %`;
+                        document.getElementById('stat-avg-aqi').innerText = `${s.avg_air}`;
+                    }
+
+                    // Update database metadata
+                    document.getElementById('db-total-records').innerText = data.total_records || 0;
+                    if (data.database) {
+                        document.getElementById('health-db-size').innerText = `${data.database.size} bytes`;
+                    }
+                    if (data.mqtt) {
+                        document.getElementById('health-mqtt-msgs').innerText = data.mqtt.messages;
+                    }
+
+                    // Update uptime
+                    if (data.uptime) {
+                        document.getElementById('uptime').innerText = data.uptime;
+                    }
+
+                    // Update system health badges
+                    if (data.system) {
+                        document.getElementById('health-mqtt').innerText = data.system.mqtt;
+                        document.getElementById('health-db').innerText = data.system.database;
+                    }
+
+                    // Update alerts
+                    const alertList = document.getElementById('active-alerts-list');
+                    if (data.alerts && data.alerts.length > 0) {
+                        alertList.innerHTML = data.alerts.map(a => `<div class="alert-item">⚠️ ${a}</div>`).join('');
+                    } else {
+                        alertList.innerHTML = '<div class="no-alerts">✅ No Active Alerts</div>';
+                    }
+
+                    // Update AI Anomalies
+                    const anomalyList = document.getElementById('ai-anomalies-list');
+                    if (data.ai_anomalies && data.ai_anomalies.length > 0) {
+                        anomalyList.innerHTML = data.ai_anomalies.map(a => `<div class="ai-anomaly-item">${a}</div>`).join('');
+                    } else {
+                        anomalyList.innerHTML = '<div class="no-alerts">✅ System Stable: No Statistical Anomalies</div>';
+                    }
+
+                    // Update AI Forecasts
+                    const forecastWarnings = document.getElementById('ai-forecast-warnings');
+                    if (data.ai_forecasts && Object.keys(data.ai_forecasts).length > 0) {
+                        document.getElementById('fore-temp').innerText = `${data.ai_forecasts.temperature} °C`;
+                        document.getElementById('fore-aqi').innerText = `${data.ai_forecasts.air_quality} AQI`;
+                        
+                        if (data.ai_warnings && data.ai_warnings.length > 0) {
+                            forecastWarnings.innerHTML = data.ai_warnings.map(w => `<div class="ai-warning-item">${w}</div>`).join('');
+                        } else {
+                            forecastWarnings.innerHTML = '<div style="font-size: 0.85rem; color: var(--accent-green); font-weight: bold;">📈 Normal Trends: No future threshold breaches projected</div>';
+                        }
+                    } else {
+                        document.getElementById('fore-temp').innerText = '--.- °C';
+                        document.getElementById('fore-aqi').innerText = '---';
+                        forecastWarnings.innerHTML = '<div style="font-size: 0.85rem; color: var(--text-muted);">Collecting baseline data...</div>';
+                    }
+
+                    // Update Live Chart if timestamp is new
+                    if (sensor.timestamp !== lastTimestamp) {
+                        lastTimestamp = sensor.timestamp;
+                        const timeLabel = sensor.timestamp.split(' ')[1]; // Get HH:MM:SS
+                        
+                        // Push new data points
+                        telemetryChart.data.labels.push(timeLabel);
+                        telemetryChart.data.datasets[0].data.push(sensor.temperature);
+                        telemetryChart.data.datasets[1].data.push(sensor.air_quality);
+                        
+                        // Shift older data if > 15 elements
+                        if (telemetryChart.data.labels.length > 15) {
+                            telemetryChart.data.labels.shift();
+                            telemetryChart.data.datasets[0].data.shift();
+                            telemetryChart.data.datasets[1].data.shift();
+                        }
+                        
+                        telemetryChart.update();
+                    }
+                })
+                .catch(err => console.error("Error fetching telemetry:", err));
+        }
+
+        // Helper to flash value if changed
+        function updateValue(id, val) {
+            const el = document.getElementById(id);
+            if (el.innerText !== String(val)) {
+                el.innerText = val;
+                el.classList.remove('flash');
+                void el.offsetWidth; // trigger reflow
+                el.classList.add('flash');
+            }
+        }
+
+        // Poll API every 2 seconds
+        setInterval(fetchTelemetry, 2000);
+        setInterval(fetchAuditLogs, 2500);
+        
+        // Run immediately on load
+        fetchTelemetry();
+        fetchUsers();
+        fetchAuditLogs();
+    </script>
+</body>
+</html>
