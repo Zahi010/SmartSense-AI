@@ -1,0 +1,40 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Virtual environments
+venv/
+env/
+.venv/
+
+# Secrets & sensitive config
+secret.key
+config.py
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+
+# Logs & data files
+sensor_log.csv
+telemetry_nosql.jsonl
+*.log
+
+# Scratch / temp files
+scratch/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
